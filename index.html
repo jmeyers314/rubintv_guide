@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>RubinTV Guide</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            position: relative;
+        }
+        #search-container {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #search-input {
+            width: 280px;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        .search-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            line-height: 1.3;
+        }
+        .search-result-item:hover {
+            background: #f8f9fa;
+        }
+        .search-result-item.search-highlighted {
+            background: #e3f2fd;
+        }
+        #chart {
+            padding: 8px;
+        }
+        #info-panel {
+            position: fixed;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            display: none;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #info-panel h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        #info-panel .info-item {
+            margin-bottom: 10px;
+        }
+        #info-panel .info-label {
+            font-weight: bold;
+            color: #6c757d;
+        }
+        #info-panel a {
+            color: #007bff;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        #info-panel a:hover {
+            text-decoration: underline;
+        }
+        .block {
+            stroke: none;
+            cursor: pointer;
+        }
+        .block.selected {
+            stroke: #000;
+            stroke-width: 4px;
+        }
+        .block.highlighted {
+            stroke: #007bff;
+            stroke-width: 4px;
+        }
+        .block.flash {
+            animation: flashSelection 1s ease-out;
+        }
+        @keyframes flashSelection {
+            0% { stroke: #ff6b6b; stroke-width: 6px; }
+            25% { stroke: #ff6b6b; stroke-width: 6px; }
+            50% { stroke: #000; stroke-width: 4px; }
+            75% { stroke: #ff6b6b; stroke-width: 6px; }
+            100% { stroke: #000; stroke-width: 4px; }
+        }
+        .tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.3;
+            opacity: 0;
+            transition: opacity 120ms ease-out;
+        }
+        .row-sep {
+            stroke: #eee;
+        }
+        .x-axis, .y-axis {
+            font-size: 11px;
+        }
+        .x-axis path, .y-axis path,
+        .x-axis line, .y-axis line {
+            stroke: #333;
+        }
+        .axis-label {
+            font-size: 12px;
+            font-weight: 500;
+            fill: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Search programs... (press / or Ctrl+F)" autocomplete="off">
+        <div id="search-results"></div>
+    </div>
+    <div id="chart"></div>
+    <div id="info-panel">
+        <h3 id="panel-title">Selection Info</h3>
+        <div id="panel-content"></div>
+    </div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
