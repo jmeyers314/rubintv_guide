@@ -206,8 +206,6 @@ Promise.all([
     // Function to calculate twilight times for a given astronomical day
     function calculateTwilightTimes(astronomicalDayStr) {
         try {
-            console.log('Calculating twilight for:', astronomicalDayStr);
-
             // Parse the astronomical day string (YYYY-MM-DD format)
             const [year, month, day] = astronomicalDayStr.split('-').map(Number);
 
@@ -215,9 +213,7 @@ Promise.all([
             if (typeof Astronomy === 'undefined') {
                 console.warn('Astronomy Engine not loaded, using fallback');
                 return [];
-            }
-
-            // Create observer object for Cerro Pachón
+            }            // Create observer object for Cerro Pachón
             const observer = new Astronomy.Observer(CERRO_PACHON_LAT, CERRO_PACHON_LON, CERRO_PACHON_ELEVATION);
 
             // The astronomical day starts at 15:00 UTC (noon UTC-3)
@@ -278,9 +274,6 @@ Promise.all([
 
             // Sort events by time
             events.sort((a, b) => a.minutes - b.minutes);
-
-            console.log(`Found ${events.length} twilight events for ${astronomicalDayStr}:`,
-                       events.map(e => `${e.type}: ${e.hours.toFixed(2)}h (${new Date(dayStart.getTime() + e.minutes * 60000).toISOString().substr(11, 5)} UTC)`));
 
             return events;
 
@@ -377,6 +370,68 @@ Promise.all([
         }
 
         return backgrounds;
+    }
+
+    // Function to calculate moon rise and set times for a given astronomical day
+    function calculateMoonTimes(astronomicalDayStr) {
+        try {
+            // Parse the astronomical day string (YYYY-MM-DD format)
+            const [year, month, day] = astronomicalDayStr.split('-').map(Number);
+
+            // Check if Astronomy Engine is available
+            if (typeof Astronomy === 'undefined') {
+                console.warn('Astronomy Engine not loaded, cannot calculate moon times');
+                return null;
+            }
+
+            // Create observer object for Cerro Pachón
+            const observer = new Astronomy.Observer(CERRO_PACHON_LAT, CERRO_PACHON_LON, CERRO_PACHON_ELEVATION);
+
+            // The astronomical day starts at 15:00 UTC (noon UTC-3)
+            const dayStart = new Date(Date.UTC(year, month - 1, day, 15, 0, 0));
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+            let moonrise = null;
+            let moonset = null;
+
+            try {
+                // Search for moonrise within this astronomical day
+                const searchStart = Astronomy.MakeTime(dayStart);
+
+                // Use SearchRiseSet to find moonrise and moonset
+                const riseSetResult = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observer, +1, searchStart, 1.0);
+
+                if (riseSetResult && riseSetResult.date >= dayStart && riseSetResult.date < dayEnd) {
+                    const minutesSinceNoon = (riseSetResult.date.getTime() - dayStart.getTime()) / (1000 * 60);
+                    moonrise = {
+                        time: riseSetResult.date,
+                        hours: minutesSinceNoon / 60,
+                        minutes: minutesSinceNoon
+                    };
+                }
+
+                // Search for moonset within this astronomical day
+                const setResult = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observer, -1, searchStart, 1.0);
+
+                if (setResult && setResult.date >= dayStart && setResult.date < dayEnd) {
+                    const minutesSinceNoon = (setResult.date.getTime() - dayStart.getTime()) / (1000 * 60);
+                    moonset = {
+                        time: setResult.date,
+                        hours: minutesSinceNoon / 60,
+                        minutes: minutesSinceNoon
+                    };
+                }
+
+            } catch (e) {
+                console.warn(`Could not find moon rise/set for ${astronomicalDayStr}:`, e.message);
+            }
+
+            return { moonrise, moonset };
+
+        } catch (error) {
+            console.error(`Error calculating moon times for ${astronomicalDayStr}:`, error);
+            return null;
+        }
     }
 
     // Tooltip
@@ -845,10 +900,8 @@ Promise.all([
         .text("CLDT (UTC-4)");
 
     // Draw twilight backgrounds
-    console.log('Drawing twilight backgrounds for days:', days);
     days.forEach(day => {
         const backgrounds = createTwilightBackground(day);
-        console.log(`Backgrounds for ${day}:`, backgrounds);
 
         backgrounds.forEach(bg => {
             g.append("rect")
@@ -863,8 +916,63 @@ Promise.all([
         });
     });
 
+    // Draw moon overlays
+    days.forEach(day => {
+        const moonTimes = calculateMoonTimes(day);
+
+        if (moonTimes && (moonTimes.moonrise || moonTimes.moonset)) {
+            // Determine the period when the moon is visible (above horizon)
+            let moonVisibleStart = null;
+            let moonVisibleEnd = null;
+
+            if (moonTimes.moonrise && moonTimes.moonset) {
+                // Both rise and set within the day
+                if (moonTimes.moonrise.hours < moonTimes.moonset.hours) {
+                    // Normal case: rise then set
+                    moonVisibleStart = moonTimes.moonrise.hours;
+                    moonVisibleEnd = moonTimes.moonset.hours;
+                } else {
+                    // Moon sets before it rises (was already up at start of day)
+                    // Create two segments: start to set, and rise to end
+                    g.append("rect")
+                        .attr("class", "moon-overlay")
+                        .attr("x", x(0))
+                        .attr("y", y(day))
+                        .attr("width", x(moonTimes.moonset.hours) - x(0))
+                        .attr("height", y.bandwidth())
+                        .attr("fill", "#b3d9ff")
+                        .attr("opacity", 0.4)
+                        .style("pointer-events", "none");
+
+                    moonVisibleStart = moonTimes.moonrise.hours;
+                    moonVisibleEnd = 24;
+                }
+            } else if (moonTimes.moonrise) {
+                // Only moonrise within the day
+                moonVisibleStart = moonTimes.moonrise.hours;
+                moonVisibleEnd = 24;
+            } else if (moonTimes.moonset) {
+                // Only moonset within the day (moon was up at start)
+                moonVisibleStart = 0;
+                moonVisibleEnd = moonTimes.moonset.hours;
+            }
+
+            // Draw the main moon visibility period
+            if (moonVisibleStart !== null && moonVisibleEnd !== null) {
+                g.append("rect")
+                    .attr("class", "moon-overlay")
+                    .attr("x", x(moonVisibleStart))
+                    .attr("y", y(day))
+                    .attr("width", x(moonVisibleEnd) - x(moonVisibleStart))
+                    .attr("height", y.bandwidth())
+                    .attr("fill", "#b3d9ff")  // More saturated blue
+                    .attr("opacity", 0.4)     // Nice balance of visibility
+                    .style("pointer-events", "none"); // Don't interfere with block interactions
+            }
+        }
+    });
+
     // Draw Blocks
-    console.log('Drawing blocks, data length:', data.length);
     const blockElements = g.selectAll("rect.block")
         .data(data)
         .join("rect")
