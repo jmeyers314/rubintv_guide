@@ -198,6 +198,187 @@ Promise.all([
                 .range([0, innerHeight])
                 .padding(0.1);
 
+    // Cerro Pachón coordinates (Rubin Observatory)
+    const CERRO_PACHON_LAT = -30.2408;
+    const CERRO_PACHON_LON = -70.7364;
+    const CERRO_PACHON_ELEVATION = 2715; // meters
+
+    // Function to calculate twilight times for a given astronomical day
+    function calculateTwilightTimes(astronomicalDayStr) {
+        try {
+            console.log('Calculating twilight for:', astronomicalDayStr);
+
+            // Parse the astronomical day string (YYYY-MM-DD format)
+            const [year, month, day] = astronomicalDayStr.split('-').map(Number);
+
+            // Check if Astronomy Engine is available
+            if (typeof Astronomy === 'undefined') {
+                console.warn('Astronomy Engine not loaded, using fallback');
+                return [];
+            }
+
+            // Create observer object for Cerro Pachón
+            const observer = new Astronomy.Observer(CERRO_PACHON_LAT, CERRO_PACHON_LON, CERRO_PACHON_ELEVATION);
+
+            // The astronomical day starts at 15:00 UTC (noon UTC-3)
+            const dayStart = new Date(Date.UTC(year, month - 1, day, 15, 0, 0));
+            const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+            const events = [];
+
+            // Define twilight elevation angles (standard astronomical definitions)
+            const twilightEvents = [
+                { name: 'sunset', angle: -0.8333, direction: -1 },
+                { name: 'civil_dusk', angle: -6, direction: -1 },
+                { name: 'nautical_dusk', angle: -12, direction: -1 },
+                { name: 'astronomical_dusk', angle: -18, direction: -1 },
+                { name: 'astronomical_dawn', angle: -18, direction: +1 },
+                { name: 'nautical_dawn', angle: -12, direction: +1 },
+                { name: 'civil_dawn', angle: -6, direction: +1 },
+                { name: 'sunrise', angle: -0.8333, direction: +1 }
+            ];
+
+            // Search for each twilight event
+            for (let twilight of twilightEvents) {
+                try {
+                    // Start search from beginning of astronomical day
+                    let searchTime = Astronomy.MakeTime(dayStart);
+
+                    // Search for altitude crossing within the 24-hour period
+                    const result = Astronomy.SearchAltitude(
+                        Astronomy.Body.Sun,
+                        observer,
+                        twilight.direction,
+                        searchTime,
+                        1.0, // search 1 day
+                        twilight.angle
+                    );
+
+                    if (result) {
+                        // Get the Date object from the AstroTime result
+                        const eventDate = result.date;
+
+                        // Check if event falls within our astronomical day
+                        if (eventDate >= dayStart && eventDate < dayEnd) {
+                            const minutesSinceNoon = (eventDate.getTime() - dayStart.getTime()) / (1000 * 60);
+                            const hoursSinceNoon = minutesSinceNoon / 60;
+
+                            events.push({
+                                type: twilight.name,
+                                time: eventDate,
+                                hours: hoursSinceNoon,
+                                minutes: minutesSinceNoon
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`Could not find ${twilight.name} for ${astronomicalDayStr}:`, e.message);
+                }
+            }
+
+            // Sort events by time
+            events.sort((a, b) => a.minutes - b.minutes);
+
+            console.log(`Found ${events.length} twilight events for ${astronomicalDayStr}:`,
+                       events.map(e => `${e.type}: ${e.hours.toFixed(2)}h (${new Date(dayStart.getTime() + e.minutes * 60000).toISOString().substr(11, 5)} UTC)`));
+
+            return events;
+
+        } catch (error) {
+            console.error(`Error calculating twilight for ${astronomicalDayStr}:`, error);
+            return [];
+        }
+    }
+
+    // Function to create twilight background for a single day
+    function createTwilightBackground(astronomicalDayStr) {
+        const events = calculateTwilightTimes(astronomicalDayStr);
+        const backgrounds = [];
+
+        // Define background colors for different periods
+        const colors = {
+            day: { color: '#87ceeb', opacity: 0.1 },           // Sky blue, very light
+            civil: { color: '#ffa500', opacity: 0.15 },        // Orange
+            nautical: { color: '#4169e1', opacity: 0.2 },      // Royal blue
+            astronomical: { color: '#191970', opacity: 0.25 }, // Midnight blue
+            night: { color: '#1a1a2e', opacity: 0.3 }          // Very dark blue
+        };
+
+        // Start with day since astronomical day begins at noon local (15:00 UTC)
+        let currentMinutes = 0;
+        let currentState = 'day';
+
+        // If no events found, default to day for the entire period
+        if (events.length === 0) {
+            backgrounds.push({
+                start: 0,
+                end: 24,
+                type: 'day',
+                ...colors.day
+            });
+            return backgrounds;
+        }
+
+        // Process each twilight event
+        for (let i = 0; i < events.length; i++) {
+            const event = events[i];
+            const eventHours = event.minutes / 60; // Convert minutes to hours for display
+
+            // Add background for current state up to this event
+            if (eventHours > currentMinutes / 60) {
+                backgrounds.push({
+                    start: currentMinutes / 60,
+                    end: eventHours,
+                    type: currentState,
+                    ...colors[currentState]
+                });
+            }
+
+            // Update state based on event type
+            switch (event.type) {
+                case 'sunset':
+                    currentState = 'civil';
+                    break;
+                case 'civil_dusk':
+                    currentState = 'nautical';
+                    break;
+                case 'nautical_dusk':
+                    currentState = 'astronomical';
+                    break;
+                case 'astronomical_dusk':
+                    currentState = 'night';
+                    break;
+                case 'astronomical_dawn':
+                    currentState = 'astronomical';
+                    break;
+                case 'nautical_dawn':
+                    currentState = 'nautical';
+                    break;
+                case 'civil_dawn':
+                    currentState = 'civil';
+                    break;
+                case 'sunrise':
+                    currentState = 'day';
+                    break;
+            }
+
+            currentMinutes = event.minutes;
+        }
+
+        // Add final background from last event to end of day
+        const finalHours = currentMinutes / 60;
+        if (finalHours < 24) {
+            backgrounds.push({
+                start: finalHours,
+                end: 24,
+                type: currentState,
+                ...colors[currentState]
+            });
+        }
+
+        return backgrounds;
+    }
+
     // Tooltip
     const tooltip = d3.select("body")
                       .append("div")
@@ -663,7 +844,27 @@ Promise.all([
         .style("font-size", "10px")
         .text("CLDT (UTC-4)");
 
+    // Draw twilight backgrounds
+    console.log('Drawing twilight backgrounds for days:', days);
+    days.forEach(day => {
+        const backgrounds = createTwilightBackground(day);
+        console.log(`Backgrounds for ${day}:`, backgrounds);
+
+        backgrounds.forEach(bg => {
+            g.append("rect")
+                .attr("class", "twilight-background")
+                .attr("x", x(bg.start))
+                .attr("y", y(day))
+                .attr("width", x(bg.end) - x(bg.start))
+                .attr("height", y.bandwidth())
+                .attr("fill", bg.color)
+                .attr("opacity", bg.opacity)
+                .style("pointer-events", "none"); // Don't interfere with block interactions
+        });
+    });
+
     // Draw Blocks
+    console.log('Drawing blocks, data length:', data.length);
     const blockElements = g.selectAll("rect.block")
         .data(data)
         .join("rect")
