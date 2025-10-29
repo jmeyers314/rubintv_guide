@@ -466,6 +466,117 @@ Promise.all([
         </div>`);
     }
 
+    // Check if search is currently active
+    function isSearchActive() {
+        return searchResults.style("display") !== "none";
+    }
+
+    // Find the next/previous block for keyboard navigation
+    function findAdjacentBlock(direction) {
+        if (!selectedBlock || highlightedProgram) {
+            return null; // Only navigate when exactly one block is selected
+        }
+
+        // Find the currently selected block in the data array
+        const currentIndex = data.findIndex(d =>
+            (d.originalBlock || d) === selectedBlock
+        );
+
+        if (currentIndex === -1) return null;
+
+        // Find adjacent block based on direction
+        let targetIndex = -1;
+
+        if (direction === 'up' || direction === 'down') {
+            // Navigate vertically (different days)
+            const currentDay = data[currentIndex].day;
+            const currentX = data[currentIndex].x0;
+
+            // Find blocks on other days at similar time positions
+            const otherDayBlocks = data
+                .map((d, i) => ({ data: d, index: i }))
+                .filter(({ data: d }) => d.day !== currentDay)
+                .sort((a, b) => {
+                    const dayDiff = direction === 'up' ?
+                        a.data.day.localeCompare(currentDay) :
+                        b.data.day.localeCompare(currentDay);
+                    if (dayDiff !== 0) return dayDiff;
+
+                    // Secondary sort by time proximity
+                    return Math.abs(a.data.x0 - currentX) - Math.abs(b.data.x0 - currentX);
+                });
+
+            if (otherDayBlocks.length > 0) {
+                const targetDayBlocks = otherDayBlocks.filter(({ data: d }) =>
+                    d.day === otherDayBlocks[0].data.day
+                );
+
+                // Find closest block by time on the target day
+                const closest = targetDayBlocks.reduce((prev, curr) =>
+                    Math.abs(curr.data.x0 - currentX) < Math.abs(prev.data.x0 - currentX) ? curr : prev
+                );
+
+                targetIndex = closest.index;
+            }
+        } else if (direction === 'left' || direction === 'right') {
+            // Navigate horizontally (same day, different time)
+            const currentDay = data[currentIndex].day;
+            const sameDayBlocks = data
+                .map((d, i) => ({ data: d, index: i }))
+                .filter(({ data: d }) => d.day === currentDay)
+                .sort((a, b) => a.data.x0 - b.data.x0);
+
+            const currentPos = sameDayBlocks.findIndex(({ index }) => index === currentIndex);
+
+            if (direction === 'left' && currentPos > 0) {
+                targetIndex = sameDayBlocks[currentPos - 1].index;
+            } else if (direction === 'right' && currentPos < sameDayBlocks.length - 1) {
+                targetIndex = sameDayBlocks[currentPos + 1].index;
+            }
+        }
+
+        return targetIndex >= 0 ? data[targetIndex] : null;
+    }
+
+    // Navigate to a specific block
+    function navigateToBlock(targetBlock) {
+        if (!targetBlock) return;
+
+        // Clear current selection
+        clearSelection();
+
+        // Select the new block
+        selectedBlock = targetBlock.originalBlock || targetBlock;
+
+        // Highlight the block visually
+        const targetBlocks = g.selectAll(".block")
+            .classed("selected", blockData => blockData.blockId === targetBlock.blockId);
+
+        // Add flash animation
+        targetBlocks
+            .filter(blockData => blockData.blockId === targetBlock.blockId)
+            .classed("flash", true)
+            .on("animationend.flash", function() {
+                d3.select(this).classed("flash", false).on("animationend.flash", null);
+            });
+
+        // Show info panel
+        showSingleBlockInfo(targetBlock);
+
+        // Scroll to the block
+        const blockElement = targetBlocks.node();
+        if (blockElement) {
+            const rect = blockElement.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const scrollY = rect.top + window.pageYOffset - (viewportHeight / 2);
+
+            window.scrollTo({
+                top: Math.max(0, scrollY),
+                behavior: 'smooth'
+            });
+        }
+    }
+
     // Function to show info panel content
     function showInfoPanel() {
         infoPanel.classed("empty", false);
@@ -789,44 +900,81 @@ Promise.all([
     function selectProgram(program) {
         clearSelection();
         const baseProgram = getBaseBlockName(program);
-        highlightedProgram = baseProgram;
 
-        // Highlight all blocks with the same base program (including versions)
-        const highlightedBlocks = g.selectAll(".block")
-            .classed("highlighted", blockData => getBaseBlockName(blockData.program) === baseProgram);
+        // Find all blocks for this program
+        const programBlocks = data.filter(d => getBaseBlockName(d.program) === baseProgram);
 
-        // Add flash animation to highlighted blocks
-        highlightedBlocks
-            .filter(blockData => getBaseBlockName(blockData.program) === baseProgram)
-            .classed("flash", true)
-            .on("animationend.flash", function() {
-                d3.select(this).classed("flash", false).on("animationend.flash", null);
-            });
+        if (programBlocks.length === 1) {
+            // Exactly one block - show block information instead of program summary
+            const singleBlock = programBlocks[0];
+            selectedBlock = singleBlock.originalBlock || singleBlock;
 
-        showProgramInfo(baseProgram);
+            // Highlight just this single block
+            const selectedBlocks = g.selectAll(".block")
+                .classed("selected", blockData => blockData.blockId === singleBlock.blockId);
 
-        // Scroll to the first block of this program
-        const firstBlock = data.find(d => getBaseBlockName(d.program) === baseProgram);
-        if (firstBlock) {
-            const blockElement = g.selectAll(".block")
-                .filter(d => d === firstBlock)
-                .node();
+            // Add flash animation to selected block
+            selectedBlocks
+                .filter(blockData => blockData.blockId === singleBlock.blockId)
+                .classed("flash", true)
+                .on("animationend.flash", function() {
+                    d3.select(this).classed("flash", false).on("animationend.flash", null);
+                });
 
+            showSingleBlockInfo(singleBlock);
+
+            // Scroll to the block
+            const blockElement = selectedBlocks.node();
             if (blockElement) {
-                // Get the position of the block relative to the page
                 const rect = blockElement.getBoundingClientRect();
-                const svgRect = svg.node().getBoundingClientRect();
-
-                // Calculate the scroll position to center the block vertically
-                const blockY = rect.top + window.pageYOffset;
                 const viewportHeight = window.innerHeight;
-                const scrollY = blockY - (viewportHeight / 2);
+                const scrollY = rect.top + window.pageYOffset - (viewportHeight / 2);
 
-                // Smooth scroll to the block
                 window.scrollTo({
                     top: Math.max(0, scrollY),
                     behavior: 'smooth'
                 });
+            }
+        } else {
+            // Multiple blocks - show program summary as before
+            highlightedProgram = baseProgram;
+
+            // Highlight all blocks with the same base program (including versions)
+            const highlightedBlocks = g.selectAll(".block")
+                .classed("highlighted", blockData => getBaseBlockName(blockData.program) === baseProgram);
+
+            // Add flash animation to highlighted blocks
+            highlightedBlocks
+                .filter(blockData => getBaseBlockName(blockData.program) === baseProgram)
+                .classed("flash", true)
+                .on("animationend.flash", function() {
+                    d3.select(this).classed("flash", false).on("animationend.flash", null);
+                });
+
+            showProgramInfo(baseProgram);
+
+            // Scroll to the first block of this program
+            const firstBlock = data.find(d => getBaseBlockName(d.program) === baseProgram);
+            if (firstBlock) {
+                const blockElement = g.selectAll(".block")
+                    .filter(d => d === firstBlock)
+                    .node();
+
+                if (blockElement) {
+                    // Get the position of the block relative to the page
+                    const rect = blockElement.getBoundingClientRect();
+
+                    // Calculate the scroll position to center the block vertically
+                    const blockY = rect.top + window.pageYOffset;
+                    const viewportHeight = window.innerHeight;
+                    const scrollY = blockY - (viewportHeight / 2);
+
+                    // Smooth scroll to the block
+                    window.scrollTo({
+                        top: Math.max(0, scrollY),
+                        behavior: 'smooth'
+                    });
+                }
             }
         }
     }
@@ -1121,6 +1269,36 @@ Promise.all([
         if (event.key === "/" || (event.ctrlKey && event.key === "f")) {
             event.preventDefault();
             searchInput.node().focus();
+        } else if (!isSearchActive() && selectedBlock && !highlightedProgram) {
+            // Arrow key navigation when exactly one block is selected and search is closed
+            let targetBlock = null;
+
+            switch(event.key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    targetBlock = findAdjacentBlock('up');
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    targetBlock = findAdjacentBlock('down');
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    targetBlock = findAdjacentBlock('left');
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    targetBlock = findAdjacentBlock('right');
+                    break;
+                case 'Escape':
+                    event.preventDefault();
+                    clearSelection();
+                    break;
+            }
+
+            if (targetBlock) {
+                navigateToBlock(targetBlock);
+            }
         }
     });
 
