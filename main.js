@@ -708,7 +708,7 @@ Promise.all([
                 };
             })
             .filter(item => item.matched)
-            .sort((a, b) => b.score - a.score); // No limit on results
+            .sort((a, b) => b.score - a.score); // Sort by score descending
 
         if (rankedPrograms.length === 0) {
             searchResults.style("display", "none");
@@ -727,10 +727,16 @@ Promise.all([
             .selectAll(".search-result-item")
             .data(rankedPrograms, d => d.program);
 
-        items.enter()
+        // Remove all existing items first to ensure proper ordering
+        items.exit().remove();
+
+        // Create new items in the correct order
+        const newItems = items.enter()
             .append("div")
-            .attr("class", "search-result-item")
-            .merge(items)
+            .attr("class", "search-result-item");
+
+        // Merge and update all items
+        const allItems = newItems.merge(items)
             .html(d => {
                 const description = d.description;
                 const versions = d.matchingVersions || [d.program];
@@ -759,7 +765,8 @@ Promise.all([
                 selectedSearchIndex = -1;
             });
 
-        items.exit().remove();
+        // Ensure DOM order matches data order
+        allItems.order();
     }
 
     // Function to update search result highlighting
