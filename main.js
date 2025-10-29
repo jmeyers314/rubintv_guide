@@ -464,7 +464,7 @@ Promise.all([
         d3.select("#info-placeholder").style("display", "block");
         panelTitle.text("Selection Info");
         panelContent.html(`<div id="info-placeholder" style="color: #666; font-style: italic; padding: 20px; text-align: center;">
-            Click on a block or search for a program to view details
+            Click on a block for details or double-click to view all program versions. Use the search box to find specific programs.
         </div>`);
     }
 
