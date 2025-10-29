@@ -824,6 +824,21 @@ Promise.all([
     });
 
     // Add axes
+    // Y-axis (observation days) - keep this in the main chart
+    const yAxis = d3.axisLeft(y);
+
+    g.append("g")
+        .attr("class", "y-axis")
+        .call(yAxis);
+
+    // Create floating bottom axes
+    const floatingAxisSvg = d3.select("#floating-axis-svg")
+        .attr("width", width)
+        .attr("height", 120);
+
+    const floatingG = floatingAxisSvg.append("g")
+        .attr("transform", `translate(${margin.left},15)`);
+
     // X-axis (time of day) - astronomical time starting from UTC-3 noon (15:00 UTC)
     const xAxis = d3.axisBottom(x)
                     .tickFormat(d => {
@@ -834,9 +849,9 @@ Promise.all([
                     })
                     .ticks(12);
 
-    g.append("g")
+    floatingG.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${innerHeight})`)
+        .attr("transform", `translate(0,0)`)
         .call(xAxis);
 
     // X-axis for Chile Standard Time (CLT, UTC-3)
@@ -848,9 +863,9 @@ Promise.all([
                        })
                        .ticks(12);
 
-    g.append("g")
+    floatingG.append("g")
         .attr("class", "x-axis x-axis-clt")
-        .attr("transform", `translate(0,${innerHeight + 40})`)
+        .attr("transform", `translate(0,35)`)
         .call(xAxisCLT);
 
     // X-axis for Chile Daylight Time (CLDT, UTC-4)
@@ -862,42 +877,38 @@ Promise.all([
                         })
                         .ticks(12);
 
-    g.append("g")
+    floatingG.append("g")
         .attr("class", "x-axis x-axis-cldt")
-        .attr("transform", `translate(0,${innerHeight + 80})`)
+        .attr("transform", `translate(0,70)`)
         .call(xAxisCLDT);
 
-    // Y-axis (observation days)
-    const yAxis = d3.axisLeft(y);
-
-    g.append("g")
-        .attr("class", "y-axis")
-        .call(yAxis);
-
-    // Axis labels
-    g.append("text")
+    // Axis labels for floating axes
+    floatingG.append("text")
         .attr("class", "axis-label")
         .attr("x", -10)
-        .attr("y", innerHeight + 5)
+        .attr("y", 5)
         .style("text-anchor", "end")
         .style("font-size", "10px")
         .text("UTC");
 
-    g.append("text")
+    floatingG.append("text")
         .attr("class", "axis-label")
         .attr("x", -10)
-        .attr("y", innerHeight + 45)
+        .attr("y", 40)
         .style("text-anchor", "end")
         .style("font-size", "10px")
         .text("CLT (UTC-3)");
 
-    g.append("text")
+    floatingG.append("text")
         .attr("class", "axis-label")
         .attr("x", -10)
-        .attr("y", innerHeight + 85)
+        .attr("y", 75)
         .style("text-anchor", "end")
         .style("font-size", "10px")
         .text("CLDT (UTC-4)");
+
+    // Add padding to the bottom of the body to account for the floating axis
+    d3.select("body").style("padding-bottom", "140px");
 
     // Draw twilight backgrounds
     days.forEach(day => {

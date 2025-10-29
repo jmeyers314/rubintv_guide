@@ -54,6 +54,21 @@
         #chart {
             padding: 8px;
         }
+        #floating-axis {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+            padding: 8px;
+        }
+        #floating-axis-svg {
+            width: 100%;
+            height: 120px;
+        }
         #info-panel {
             position: fixed;
             top: 0;
@@ -148,6 +163,9 @@
         <div id="search-results"></div>
     </div>
     <div id="chart"></div>
+    <div id="floating-axis">
+        <svg id="floating-axis-svg"></svg>
+    </div>
     <div id="info-panel">
         <h3 id="panel-title">Selection Info</h3>
         <div id="panel-content"></div>
