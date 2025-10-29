@@ -506,14 +506,6 @@ Promise.all([
                 <div>${d.seq_num_0} - ${d.seq_num_1}</div>
             </div>
             <div class="info-item">
-                <div class="info-label">Start Time:</div>
-                <div>${fmtTime(originalBlock.begin)}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">End Time:</div>
-                <div>${fmtTime(originalBlock.end)}</div>
-            </div>
-            <div class="info-item">
                 <div class="info-label">Duration:</div>
                 <div>${durationH.toFixed(2)} hours</div>
             </div>
