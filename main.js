@@ -299,7 +299,7 @@ Promise.all([
 
         // Define background colors for different periods
         const colors = {
-            day: { color: '#87ceeb', opacity: 0.1 },           // Sky blue, very light
+            day: { color: '#ffffe0', opacity: 0.3 },           // Light yellow
             civil: { color: '#ffa500', opacity: 0.15 },        // Orange
             nautical: { color: '#4169e1', opacity: 0.2 },      // Royal blue
             astronomical: { color: '#191970', opacity: 0.25 }, // Midnight blue
