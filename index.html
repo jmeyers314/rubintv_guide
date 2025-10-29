@@ -54,6 +54,71 @@
         #chart {
             padding: 8px;
         }
+        /* Responsive layout container */
+        .main-container {
+            display: flex;
+            min-height: 100vh;
+            padding-bottom: 140px; /* Account for floating axis */
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .chart-container {
+            flex: 1;
+            min-width: 0; /* Allow shrinking */
+            overflow-x: auto;
+        }
+        .info-container {
+            width: 300px;
+            min-width: 250px;
+            max-width: 400px;
+            flex-shrink: 0;
+        }
+        #info-panel {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            display: block; /* Always visible in container */
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        /* Hide placeholder when panel has content */
+        #info-panel:not(.empty) #info-placeholder {
+            display: none;
+        }
+        /* Mobile/tablet responsive design */
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+                min-height: auto;
+            }
+            .chart-container {
+                flex: none;
+                width: 100%;
+                overflow-x: auto;
+            }
+            .info-container {
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+                flex-shrink: 0 !important;
+                flex-grow: 0 !important;
+                display: block !important;
+            }
+            #info-panel {
+                position: relative !important;
+                height: auto !important;
+                min-height: 200px !important;
+                max-height: 400px !important;
+                border-left: none !important;
+                border-top: 1px solid #dee2e6 !important;
+                display: block !important;
+                width: 100% !important;
+            }
+        }
         #floating-axis {
             position: fixed;
             bottom: 0;
@@ -68,18 +133,6 @@
         #floating-axis-svg {
             width: 100%;
             height: 120px;
-        }
-        #info-panel {
-            position: fixed;
-            top: 0;
-            width: 300px;
-            height: 100vh;
-            padding: 20px;
-            background: #f8f9fa;
-            border-left: 1px solid #dee2e6;
-            display: none;
-            overflow-y: auto;
-            box-sizing: border-box;
         }
         #info-panel h3 {
             margin-top: 0;
@@ -162,13 +215,23 @@
         <input type="text" id="search-input" placeholder="Search programs... (press / or Ctrl+F)" autocomplete="off">
         <div id="search-results"></div>
     </div>
-    <div id="chart"></div>
+    <div class="main-container">
+        <div class="chart-container">
+            <div id="chart"></div>
+        </div>
+        <div class="info-container">
+            <div id="info-panel">
+                <h3 id="panel-title">Selection Info</h3>
+                <div id="panel-content">
+                    <div id="info-placeholder" style="color: #666; font-style: italic; padding: 20px; text-align: center;">
+                        Click on a block or search for a program to view details
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="floating-axis">
         <svg id="floating-axis-svg"></svg>
-    </div>
-    <div id="info-panel">
-        <h3 id="panel-title">Selection Info</h3>
-        <div id="panel-content"></div>
     </div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="astronomy.browser.min.js"></script>

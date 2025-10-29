@@ -172,13 +172,17 @@ Promise.all([
     const programs = Array.from(new Set(data.map(d => getBaseBlockName(d.program))));
     const color = d3.scaleOrdinal().domain(programs).range(d3.schemeTableau10);
 
-    // Layout - adjusted for horizontal timeline with days on y-axis
-    const margin = { top: 20, right: 20, bottom: 140, left: 80 }, // Increased bottom margin for multiple x-axes with proper spacing
-          width = 1200,
-          rowHeight = 20,
-          innerWidth = width - margin.left - margin.right,
-          innerHeight = days.length * rowHeight,
-          height = innerHeight + margin.top + margin.bottom;
+    // Layout - responsive design
+    const margin = { top: 20, right: 20, bottom: 20, left: 80 };
+
+    // Make chart width responsive to container
+    const chartContainer = d3.select("#chart").node();
+    const containerWidth = chartContainer.getBoundingClientRect().width - 16; // Account for padding
+    const width = Math.max(800, containerWidth); // Minimum 800px width
+    const rowHeight = 20;
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = days.length * rowHeight;
+    const height = innerHeight + margin.top + margin.bottom;
 
     const svg = d3.select("#chart")
                   .append("svg")
@@ -449,22 +453,19 @@ Promise.all([
     const panelTitle = d3.select("#panel-title");
     const panelContent = d3.select("#panel-content");
 
-    // Function to position info panel next to the chart
+    // Function to show info panel content
     function showInfoPanel() {
-        const chartElement = d3.select("#chart").node();
-        const chartRect = chartElement.getBoundingClientRect();
-
-        // Position based on the chart div's left edge plus the SVG width and padding
-        const chartLeft = chartRect.left;
-        const panelLeft = chartLeft + width + 16; // width + padding
-
-        infoPanel
-            .style("display", "block")
-            .style("left", panelLeft + "px");
+        infoPanel.classed("empty", false);
+        d3.select("#info-placeholder").style("display", "none");
     }
 
     function hideInfoPanel() {
-        infoPanel.style("display", "none");
+        infoPanel.classed("empty", true);
+        d3.select("#info-placeholder").style("display", "block");
+        panelTitle.text("Selection Info");
+        panelContent.html(`<div id="info-placeholder" style="color: #666; font-style: italic; padding: 20px; text-align: center;">
+            Click on a block or search for a program to view details
+        </div>`);
     }
 
     // Functions for info panels
@@ -593,10 +594,6 @@ Promise.all([
             </div>
         `);
         showInfoPanel();
-    }
-
-    function hideInfoPanel() {
-        infoPanel.style("display", "none");
     }
 
     function clearSelection() {
@@ -942,9 +939,6 @@ Promise.all([
         .style("text-anchor", "end")
         .style("font-size", "10px")
         .text("CLDT (UTC-4)");
-
-    // Add padding to the bottom of the body to account for the floating axis
-    d3.select("body").style("padding-bottom", "140px");
 
     // Draw twilight backgrounds
     days.forEach(day => {
