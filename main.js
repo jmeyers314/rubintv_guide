@@ -153,14 +153,18 @@ Promise.all([
         }
     });
 
-    // Generate complete list of days (including empty days)
+    // Generate complete list of days (including empty days and 6 months future)
     const observedDays = Array.from(new Set(data.map(d => d.day))).sort(d3.ascending);
 
     // Find the date range
     const firstDay = new Date(observedDays[0]);
-    const lastDay = new Date(observedDays[observedDays.length - 1]);
+    const lastObservedDay = new Date(observedDays[observedDays.length - 1]);
 
-    // Generate all days in the range
+    // Extend the end date by 6 months for future planning
+    const lastDay = new Date(lastObservedDay);
+    lastDay.setMonth(lastDay.getMonth() + 6);
+
+    // Generate all days in the range (observed + 6 months future)
     const allDays = [];
     const currentDay = new Date(firstDay);
     while (currentDay <= lastDay) {
@@ -452,6 +456,15 @@ Promise.all([
     const infoPanel = d3.select("#info-panel");
     const panelTitle = d3.select("#panel-title");
     const panelContent = d3.select("#panel-content");
+
+    // Initialize info panel with placeholder content
+    function initializeInfoPanel() {
+        infoPanel.classed("empty", true);
+        panelTitle.text("Selection Info");
+        panelContent.html(`<div id="info-placeholder" style="color: #666; font-style: italic; padding: 20px; text-align: center;">
+            Click on a block for details or double-click to view all program versions. Use the search box to find specific programs.
+        </div>`);
+    }
 
     // Function to show info panel content
     function showInfoPanel() {
@@ -1103,4 +1116,7 @@ Promise.all([
             searchInput.node().focus();
         }
     });
+
+    // Initialize the info panel with placeholder text
+    initializeInfoPanel();
 });
