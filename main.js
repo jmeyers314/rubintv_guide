@@ -17,8 +17,9 @@ Promise.all([
 
     // Helper function to get the base block name (without version suffix)
     function getBaseBlockName(program) {
-        // Remove version suffix like _v3, _v2, _1, _2, etc.
-        return program.replace(/_(?:v)?\d+$/, '');
+        // Remove version suffixes like _v3, _v2, _1, _2, _hexapods, etc.
+        // This handles both numeric versions (_v3, _1, _2) and descriptive versions (_hexapods)
+        return program.replace(/_(?:v)?\d+$|_[a-zA-Z][a-zA-Z0-9_]*$/, '');
     }
 
     // Helper function to get the correct T-block name for description lookup
@@ -653,23 +654,55 @@ Promise.all([
             return;
         }
 
-        // Get unique programs and rank them by fuzzy match score
+        // Get all unique full program names (including versions) from the data
+        const allProgramNames = Array.from(new Set(data.map(d => d.program)));
+
+        // Create a map from base program to all its versions
+        const programVersions = {};
+        allProgramNames.forEach(fullProgram => {
+            const baseProgram = getBaseBlockName(fullProgram);
+            if (!programVersions[baseProgram]) {
+                programVersions[baseProgram] = [];
+            }
+            programVersions[baseProgram].push(fullProgram);
+        });
+
+        // Search across base programs and their versions
         const rankedPrograms = programs
             .map(program => {
-                // Search against program name
+                let bestMatch = { score: 0, matched: false };
+                let matchingVersions = [];
+
+                // Search against base program name
                 const programMatch = fuzzyMatch(query, program);
+                if (programMatch.matched) {
+                    bestMatch = programMatch;
+                    matchingVersions = programVersions[program] || [program];
+                }
+
+                // Search against all versions of this program
+                const versions = programVersions[program] || [program];
+                versions.forEach(version => {
+                    const versionMatch = fuzzyMatch(query, version);
+                    if (versionMatch.matched && versionMatch.score > bestMatch.score) {
+                        bestMatch = versionMatch;
+                        matchingVersions = [version]; // If version-specific match, show only that version
+                    }
+                });
 
                 // Also search against descriptive title if available (with BLOCK-T mapping)
                 const description = getDescription(program) || "";
                 const descriptionMatch = description ? fuzzyMatch(query, description) : { score: 0, matched: false };
-
-                // Use the best match between program name and description
-                const bestMatch = programMatch.score >= descriptionMatch.score ? programMatch : descriptionMatch;
+                if (descriptionMatch.matched && descriptionMatch.score > bestMatch.score) {
+                    bestMatch = descriptionMatch;
+                    matchingVersions = programVersions[program] || [program]; // Show all versions for description match
+                }
 
                 return {
                     program,
                     ...bestMatch,
-                    description // Store description for display
+                    description, // Store description for display
+                    matchingVersions // Store which versions matched
                 };
             })
             .filter(item => item.matched)
@@ -698,10 +731,21 @@ Promise.all([
             .merge(items)
             .html(d => {
                 const description = d.description;
+                const versions = d.matchingVersions || [d.program];
+
+                // Create version display
+                let versionText = '';
+                if (versions.length > 1) {
+                    versionText = `<div style="font-size: 0.85em; color: #007bff; margin-top: 2px;">${versions.length} versions: ${versions.join(', ')}</div>`;
+                } else if (versions[0] !== d.program) {
+                    // Show the specific version if it's different from base program
+                    versionText = `<div style="font-size: 0.85em; color: #007bff; margin-top: 2px;">Version: ${versions[0]}</div>`;
+                }
+
                 if (description) {
-                    return `<div style="font-weight: bold;">${d.program}</div><div style="font-size: 0.9em; color: #666; margin-top: 2px;">${description}</div>`;
+                    return `<div style="font-weight: bold;">${d.program}</div><div style="font-size: 0.9em; color: #666; margin-top: 2px;">${description}</div>${versionText}`;
                 } else {
-                    return d.program;
+                    return `<div style="font-weight: bold;">${d.program}</div>${versionText}`;
                 }
             })
             .classed("search-highlighted", (d, i) => i === selectedSearchIndex)
