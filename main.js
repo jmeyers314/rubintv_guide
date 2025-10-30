@@ -607,6 +607,9 @@ Promise.all([
         const seqPaddedFits = d.seq_num_0.toString().padStart(6, '0'); // Pad seq_num_0 to 6 digits for FITS
         const fitsUrl = `http://lsstcam-mcm.cp.lsst.org/FITSInfo/view.html?image=MC_O_${dayObs}_${seqPaddedFits}&raft=all&color=grey&bias=Simple+Overscan+Correction&scale=Per-Segment&source=raw`;
 
+        // Generate the RubinTV URL using the astronomical day
+        const rubinTvUrl = `https://usdf-rsp.slac.stanford.edu/rubintv/summit-usdf/lsstcam/date/${d.day}`;
+
         // Get description from translation table if available
         const description = getDescription(d.program);
 
@@ -643,12 +646,12 @@ Promise.all([
                 <div>${originalBlock.end.toISOString()}</div>
             </div>
             <div class="info-item">
-                <div class="info-label">Visit Link:</div>
-                <div><a href="${visitUrl}" target="_blank" rel="noopener noreferrer">Quick Look USDF</a></div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">FITS Viewer:</div>
-                <div><a href="${fitsUrl}" target="_blank" rel="noopener noreferrer">CCS Viewer Summit</a></div>
+                <div class="info-label">Links:</div>
+                <div>
+                    <a href="${visitUrl}" target="_blank" rel="noopener noreferrer">Quick Look Viewer USDF</a><br>
+                    <a href="${fitsUrl}" target="_blank" rel="noopener noreferrer">CCS FITS Viewer Summit</a><br>
+                    <a href="${rubinTvUrl}" target="_blank" rel="noopener noreferrer">RubinTV</a>
+                </div>
             </div>
         `);
         showInfoPanel();
