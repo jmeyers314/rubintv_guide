@@ -1,7 +1,7 @@
 // Load both the blocks data and the translation table
 Promise.all([
-    d3.json("blocks.json"),
-    d3.json("tblock_names.json")
+    d3.json("blocks.json?" + new Date().getTime()),
+    d3.json("tblock_names.json?" + new Date().getTime())
 ]).then(function([blocks, tblockNames]) {
     // Parse date strings to Date objects
     blocks.forEach(d => {
