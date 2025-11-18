@@ -174,7 +174,25 @@ Promise.all([
 
     const days = allDays;
     const programs = Array.from(new Set(data.map(d => getBaseBlockName(d.program))));
-    const color = d3.scaleOrdinal().domain(programs).range(d3.schemeTableau10);
+    // Use more vibrant colors that stand out against twilight backgrounds
+    const vibrantColors = [
+        '#e74c3c', // bright red
+        '#3498db', // bright blue
+        '#2ecc71', // bright green
+        '#f39c12', // bright orange
+        '#9b59b6', // bright purple
+        '#1abc9c', // bright teal
+        '#e91e63', // bright pink
+        '#00bcd4', // bright cyan
+        '#ff5722', // deep orange
+        '#8bc34a', // light green
+        '#ff9800', // orange
+        '#673ab7', // deep purple
+        '#009688', // teal
+        '#ffc107', // amber
+        '#795548'  // brown
+    ];
+    const color = d3.scaleOrdinal().domain(programs).range(vibrantColors);
 
     // Layout - responsive design
     const margin = { top: 20, right: 20, bottom: 20, left: 80 };
@@ -1280,6 +1298,9 @@ Promise.all([
             .attr("width", d => x(d.x1) - x(d.x0))
             .attr("height", y.bandwidth())
             .attr("fill", d => color(getBaseBlockName(d.program)))
+            .attr("fill-opacity", 0.9)
+            .attr("stroke", "#333")
+            .attr("stroke-width", 0.5)
             .on("click", function(event, d) {
                 event.stopPropagation();
                 clearSelection();
