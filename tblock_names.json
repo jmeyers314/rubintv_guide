@@ -1,4 +1,5 @@
 {
+  "BLOCK-T645": "Test the correct pointing script for SimonyiTel",
   "BLOCK-T644": "Fixed Chaos Monkey",
   "BLOCK-T643": "Dome-seeing",
   "BLOCK-T642": "Test Adding Intrinsics/Chip Heights to AOS",
