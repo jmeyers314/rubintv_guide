@@ -1038,7 +1038,7 @@ Promise.all([
     // Create floating bottom axes
     const floatingAxisSvg = d3.select("#floating-axis-svg")
         .attr("width", width)
-        .attr("height", 120);
+        .attr("height", 155);
 
     const floatingG = floatingAxisSvg.append("g")
         .attr("transform", `translate(${margin.left},15)`);
@@ -1051,12 +1051,24 @@ Promise.all([
                         let utcHour = (d + 15) % 24;
                         return utcHour.toString().padStart(2, '0') + ":00";
                     })
-                    .ticks(12);
+                    .ticks(12)
+                    .tickSize(6)
+                    .tickSizeOuter(0);
 
     floatingG.append("g")
         .attr("class", "x-axis")
         .attr("transform", `translate(0,0)`)
         .call(xAxis);
+
+    // Minor ticks for UTC (every hour, unlabeled)
+    const xAxisMinorUTC = d3.axisBottom(x)
+                            .ticks(24)
+                            .tickFormat("")
+                            .tickSize(3);
+    floatingG.append("g")
+        .attr("class", "x-axis-minor")
+        .attr("transform", `translate(0,0)`)
+        .call(xAxisMinorUTC);
 
     // X-axis for Chile Standard Time (CLT, UTC-3)
     const xAxisCLT = d3.axisBottom(x)
@@ -1065,12 +1077,24 @@ Promise.all([
                            let cltHour = (d + 15 - 3) % 24;
                            return cltHour.toString().padStart(2, '0') + ":00";
                        })
-                       .ticks(12);
+                       .ticks(12)
+                       .tickSize(6)
+                       .tickSizeOuter(0);
 
     floatingG.append("g")
         .attr("class", "x-axis x-axis-clt")
         .attr("transform", `translate(0,35)`)
         .call(xAxisCLT);
+
+    // Minor ticks for CLT (every hour, unlabeled)
+    const xAxisMinorCLT = d3.axisBottom(x)
+                            .ticks(24)
+                            .tickFormat("")
+                            .tickSize(3);
+    floatingG.append("g")
+        .attr("class", "x-axis-minor")
+        .attr("transform", `translate(0,35)`)
+        .call(xAxisMinorCLT);
 
     // X-axis for Chile Daylight Time (CLDT, UTC-4)
     const xAxisCLDT = d3.axisBottom(x)
@@ -1079,12 +1103,24 @@ Promise.all([
                             let cldtHour = (d + 15 - 4) % 24;
                             return cldtHour.toString().padStart(2, '0') + ":00";
                         })
-                        .ticks(12);
+                        .ticks(12)
+                        .tickSize(6)
+                        .tickSizeOuter(0);
 
     floatingG.append("g")
         .attr("class", "x-axis x-axis-cldt")
         .attr("transform", `translate(0,70)`)
         .call(xAxisCLDT);
+
+    // Minor ticks for CLDT (every hour, unlabeled)
+    const xAxisMinorCLDT = d3.axisBottom(x)
+                             .ticks(24)
+                             .tickFormat("")
+                             .tickSize(3);
+    floatingG.append("g")
+        .attr("class", "x-axis-minor")
+        .attr("transform", `translate(0,70)`)
+        .call(xAxisMinorCLDT);
 
     // Axis labels for floating axes
     floatingG.append("text")
@@ -1110,6 +1146,56 @@ Promise.all([
         .style("text-anchor", "end")
         .style("font-size", "10px")
         .text("CLDT (UTC-4)");
+
+    // X-axis for Local Time (user's browser timezone)
+    const localTimezoneOffset = -new Date().getTimezoneOffset() / 60; // Convert minutes to hours, flip sign
+    const xAxisLocal = d3.axisBottom(x)
+                         .tickFormat(d => {
+                             // Convert hours since UTC-3 noon to local time
+                             let localHour = (d + 15 + localTimezoneOffset) % 24;
+                             if (localHour < 0) localHour += 24;
+                             return localHour.toString().padStart(2, '0') + ":00";
+                         })
+                         .ticks(12)
+                         .tickSize(6)
+                         .tickSizeOuter(0);
+
+    floatingG.append("g")
+        .attr("class", "x-axis x-axis-local")
+        .attr("transform", `translate(0,105)`)
+        .call(xAxisLocal);
+
+    // Minor ticks for Local time (every hour, unlabeled)
+    const xAxisMinorLocal = d3.axisBottom(x)
+                              .ticks(24)
+                              .tickFormat("")
+                              .tickSize(3);
+    floatingG.append("g")
+        .attr("class", "x-axis-minor")
+        .attr("transform", `translate(0,105)`)
+        .call(xAxisMinorLocal);
+
+    // Get local timezone abbreviation or offset for label
+    const localTimezoneLabel = (() => {
+        const formatter = new Intl.DateTimeFormat('en', { timeZoneName: 'short' });
+        const parts = formatter.formatToParts(new Date());
+        const tzName = parts.find(part => part.type === 'timeZoneName')?.value;
+        // Return timezone name if available, otherwise show UTC offset
+        if (tzName && tzName !== 'GMT') {
+            return tzName;
+        }
+        const offset = localTimezoneOffset;
+        const sign = offset >= 0 ? '+' : '-';
+        return `UTC${sign}${Math.abs(offset)}`;
+    })();
+
+    floatingG.append("text")
+        .attr("class", "axis-label")
+        .attr("x", -10)
+        .attr("y", 110)
+        .style("text-anchor", "end")
+        .style("font-size", "10px")
+        .text(`Local (${localTimezoneLabel})`);
 
     // Draw twilight backgrounds
     days.forEach(day => {
