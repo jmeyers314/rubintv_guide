@@ -1482,4 +1482,28 @@ Promise.all([
 
     // Initialize the info panel with placeholder text
     initializeInfoPanel();
+
+    // Scroll to show the current date
+    // Wait a bit for rendering to complete
+    setTimeout(() => {
+        // Find today's date in YYYY-MM-DD format
+        const today = new Date();
+        const todayStr = fmtDate(today);
+
+        // Find the row for today's date
+        const todayRow = days.indexOf(todayStr);
+
+        if (todayRow !== -1) {
+            // Calculate the pixel position of today's row
+            const rowY = margin.top + todayRow * rowHeight;
+
+            // Scroll to center today's date in the viewport
+            const scrollPosition = rowY - (window.innerHeight / 2) + (rowHeight / 2);
+
+            window.scrollTo({
+                top: Math.max(0, scrollPosition),
+                behavior: 'smooth'
+            });
+        }
+    }, 100);
 });
