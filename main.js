@@ -1270,6 +1270,36 @@ Promise.all([
         });
     });
 
+    // Draw month separator lines
+    // Note: 'day' is in astronomical day format (YYYY-MM-DD), which represents
+    // the date the observation period started (at local noon/15:00 UTC)
+    days.forEach((day, index) => {
+        if (index === 0) return; // Skip first day
+
+        // Parse as YYYY-MM-DD strings to compare
+        const currentParts = day.split('-');
+        const prevParts = days[index - 1].split('-');
+
+        const currentYear = parseInt(currentParts[0]);
+        const currentMonth = parseInt(currentParts[1]);
+        const prevYear = parseInt(prevParts[0]);
+        const prevMonth = parseInt(prevParts[1]);
+
+        // Check if this is the first day of a new month
+        if (currentYear !== prevYear || currentMonth !== prevMonth) {
+            // Draw line at the top of this row, shifted up 1 pixel to be visible above blocks
+            g.append("line")
+                .attr("class", "month-separator")
+                .attr("x1", 0)
+                .attr("x2", innerWidth)
+                .attr("y1", y(day) - 1)
+                .attr("y2", y(day) - 1)
+                .attr("stroke", "#000")
+                .attr("stroke-width", 1.5)
+                .style("pointer-events", "none");
+        }
+    });
+
     // Draw moon overlays
     days.forEach(day => {
         const moonTimes = calculateMoonTimes(day);
