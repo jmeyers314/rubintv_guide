@@ -1061,6 +1061,38 @@ Promise.all([
     const floatingG = floatingAxisSvg.append("g")
         .attr("transform", `translate(${margin.left},15)`);
 
+    // Determine which Chilean timezone is currently active
+    // Chile uses CLST (UTC-3) from second Saturday of September to first Saturday of April
+    // and CLT (UTC-4) the rest of the year
+    function isChileSummerTime(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth(); // 0-11
+
+        // Approximate: CLST is roughly September-March (southern hemisphere summer)
+        // More precisely: second Saturday September to first Saturday April
+        if (month >= 8 && month <= 11) return true;  // Sep-Dec
+        if (month >= 0 && month <= 2) return true;   // Jan-Mar
+        if (month === 3) {
+            // April - need to check if before first Saturday
+            const firstDay = new Date(year, 3, 1);
+            const firstSaturday = 1 + (6 - firstDay.getDay() + 7) % 7;
+            return date.getDate() < firstSaturday;
+        }
+        if (month === 8) {
+            // September - need to check if after second Saturday
+            const firstDay = new Date(year, 8, 1);
+            const firstSaturday = 1 + (6 - firstDay.getDay() + 7) % 7;
+            const secondSaturday = firstSaturday + 7;
+            return date.getDate() >= secondSaturday;
+        }
+        return false; // April-August (except transition days)
+    }
+
+    const currentDate = new Date();
+    const isSummerTime = isChileSummerTime(currentDate);
+    const cltOpacity = isSummerTime ? 0.3 : 1.0;
+    const clstOpacity = isSummerTime ? 1.0 : 0.3;
+
     // X-axis (time of day) - astronomical time starting from UTC-3 noon (15:00 UTC)
     const xAxis = d3.axisBottom(x)
                     .tickFormat(d => {
@@ -1088,11 +1120,11 @@ Promise.all([
         .attr("transform", `translate(0,0)`)
         .call(xAxisMinorUTC);
 
-    // X-axis for Chile Standard Time (CLT, UTC-3)
+    // X-axis for Chile Standard Time (CLT, UTC-4)
     const xAxisCLT = d3.axisBottom(x)
                        .tickFormat(d => {
-                           // Convert hours since UTC-3 noon to CLT (UTC-3)
-                           let cltHour = (d + 15 - 3) % 24;
+                           // Convert hours since UTC-3 noon to CLT (UTC-4)
+                           let cltHour = (d + 15 - 4) % 24;
                            return cltHour.toString().padStart(2, '0') + ":00";
                        })
                        .ticks(12)
@@ -1102,6 +1134,7 @@ Promise.all([
     floatingG.append("g")
         .attr("class", "x-axis x-axis-clt")
         .attr("transform", `translate(0,35)`)
+        .style("opacity", cltOpacity)
         .call(xAxisCLT);
 
     // Minor ticks for CLT (every hour, unlabeled)
@@ -1112,33 +1145,36 @@ Promise.all([
     floatingG.append("g")
         .attr("class", "x-axis-minor")
         .attr("transform", `translate(0,35)`)
+        .style("opacity", cltOpacity)
         .call(xAxisMinorCLT);
 
-    // X-axis for Chile Daylight Time (CLDT, UTC-4)
-    const xAxisCLDT = d3.axisBottom(x)
+    // X-axis for Chile Summer Time (CLST, UTC-3)
+    const xAxisCLST = d3.axisBottom(x)
                         .tickFormat(d => {
-                            // Convert hours since UTC-3 noon to CLDT (UTC-4)
-                            let cldtHour = (d + 15 - 4) % 24;
-                            return cldtHour.toString().padStart(2, '0') + ":00";
+                            // Convert hours since UTC-3 noon to CLST (UTC-3)
+                            let clstHour = (d + 15 - 3) % 24;
+                            return clstHour.toString().padStart(2, '0') + ":00";
                         })
                         .ticks(12)
                         .tickSize(6)
                         .tickSizeOuter(0);
 
     floatingG.append("g")
-        .attr("class", "x-axis x-axis-cldt")
+        .attr("class", "x-axis x-axis-clst")
         .attr("transform", `translate(0,70)`)
-        .call(xAxisCLDT);
+        .style("opacity", clstOpacity)
+        .call(xAxisCLST);
 
-    // Minor ticks for CLDT (every hour, unlabeled)
-    const xAxisMinorCLDT = d3.axisBottom(x)
+    // Minor ticks for CLST (every hour, unlabeled)
+    const xAxisMinorCLST = d3.axisBottom(x)
                              .ticks(24)
                              .tickFormat("")
                              .tickSize(3);
     floatingG.append("g")
         .attr("class", "x-axis-minor")
         .attr("transform", `translate(0,70)`)
-        .call(xAxisMinorCLDT);
+        .style("opacity", clstOpacity)
+        .call(xAxisMinorCLST);
 
     // Axis labels for floating axes
     floatingG.append("text")
@@ -1155,7 +1191,8 @@ Promise.all([
         .attr("y", 40)
         .style("text-anchor", "end")
         .style("font-size", "10px")
-        .text("CLT (UTC-3)");
+        .style("opacity", cltOpacity)
+        .text("CLT (UTC-4)");
 
     floatingG.append("text")
         .attr("class", "axis-label")
@@ -1163,7 +1200,8 @@ Promise.all([
         .attr("y", 75)
         .style("text-anchor", "end")
         .style("font-size", "10px")
-        .text("CLDT (UTC-4)");
+        .style("opacity", clstOpacity)
+        .text("CLST (UTC-3)");
 
     // X-axis for Local Time (user's browser timezone)
     const localTimezoneOffset = -new Date().getTimezoneOffset() / 60; // Convert minutes to hours, flip sign
