@@ -1,4 +1,11 @@
 {
+  "BLOCK-T652": "Unpark TMA",
+  "BLOCK-T651": "M1M3 Thermalization Step Test Case: Morning",
+  "BLOCK-T650": "M1M3 Thermalization Step Test Case: End of Night",
+  "BLOCK-T649": "LSSTCam stray light from LSSTCam autochanger with different filters",
+  "BLOCK-T648": "Chaos Monkey",
+  "BLOCK-T647": "Dome Walkaround with IR camera to Study Thermal Sources",
+  "BLOCK-T646": "CBP Calibration on the TMA",
   "BLOCK-T645": "Test the correct pointing script for SimonyiTel",
   "BLOCK-T644": "Fixed Chaos Monkey",
   "BLOCK-T643": "Dome-seeing",
