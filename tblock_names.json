@@ -1,4 +1,7 @@
 {
+  "BLOCK-T696": "Louver Testing During FBS",
+  "BLOCK-T695": "LSSTCam: VPC image quality test",
+  "BLOCK-T694": "LSSTCam stray light off-axis angular extent of brush stroke feature",
   "BLOCK-T693": "Exposure Timing with Guiders roi spec disabled",
   "BLOCK-T692": "M1M3 dynamics moving from Az/El 145/70 to 102.96/26.3",
   "BLOCK-T691": "Simonyi LSSTCam Feature Based Scheduler LSST Survey (Rubin First Alerts)",
