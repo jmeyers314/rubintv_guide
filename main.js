@@ -734,9 +734,85 @@ Promise.all([
                 <div class="info-label">Date Range:</div>
                 <div>${programDataBlocks.length > 0 ? `${programDataBlocks[0].day} to ${programDataBlocks[programDataBlocks.length - 1].day}` : 'No data'}</div>
             </div>
+            <div class="info-item">
+                <div class="info-label">Individual Blocks:</div>
+                <div style="font-size: 0.9em; max-height: 300px; overflow-y: auto;">
+                    ${uniqueBlocks
+                        .sort((a, b) => {
+                            const dayA = a.originalBlock ? getAstronomicalDay(a.originalBlock.begin) : a.day;
+                            const dayB = b.originalBlock ? getAstronomicalDay(b.originalBlock.begin) : b.day;
+                            const dayCompare = dayA.localeCompare(dayB);
+                            if (dayCompare !== 0) return dayCompare;
+                            return a.seq_num_0 - b.seq_num_0;
+                        })
+                        .map(d => {
+                            const duration = d.durationH || (d.end - d.begin) / 3600000;
+                            const day = d.originalBlock ? getAstronomicalDay(d.originalBlock.begin) : d.day;
+                            return `<div style="padding: 4px 0; border-bottom: 1px solid #eee; cursor: pointer;" onclick="selectBlockById(${d.blockId}, '${day}')" onmouseenter="this.style.backgroundColor='#f0f0f0'" onmouseleave="this.style.backgroundColor='transparent'">
+                                <div><strong>${d.program}</strong></div>
+                                <div style="color: #666;">${day} | Seq: ${d.seq_num_0}-${d.seq_num_1} | ${duration.toFixed(2)}h</div>
+                            </div>`;
+                        })
+                        .join('')}
+                </div>
+            </div>
         `);
         showInfoPanel();
     }
+
+    // Function to select a block by its blockId (for use in HTML onclick)
+    function selectBlockById(blockId, day) {
+        // Find the block with this blockId in the data array, preferring the one on the specified day
+        let blockData;
+        if (day) {
+            // Find block on the specific day
+            blockData = data.find(d => d.blockId === blockId && d.day === day);
+        }
+        if (!blockData) {
+            // Fallback to any block with this blockId
+            blockData = data.find(d => d.blockId === blockId);
+        }
+        if (!blockData) return;
+
+        // Don't change the program summary view, just scroll to and flash the block
+        // Remove any existing flash classes first
+        g.selectAll(".block").classed("flash", false);
+
+        // Find and flash the blocks with this blockId
+        const selectedBlocks = g.selectAll(".block")
+            .filter(d => d.blockId === blockId);
+
+        // Add flash animation to selected blocks
+        selectedBlocks.classed("flash", true);
+
+        // Scroll to the block on the specific day if provided
+        let blockElement;
+        if (day) {
+            // Find the specific element on this day
+            selectedBlocks.each(function(d) {
+                if (d.day === day && !blockElement) {
+                    blockElement = this;
+                }
+            });
+        }
+        if (!blockElement) {
+            blockElement = selectedBlocks.node();
+        }
+
+        if (blockElement) {
+            const rect = blockElement.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const scrollY = rect.top + window.pageYOffset - (viewportHeight / 2);
+
+            window.scrollTo({
+                top: Math.max(0, scrollY),
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Make selectBlockById available globally for HTML onclick handlers
+    window.selectBlockById = selectBlockById;
 
     function clearSelection() {
         selectedBlock = null;
