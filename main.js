@@ -573,10 +573,7 @@ Promise.all([
         // Add flash animation
         targetBlocks
             .filter(blockData => blockData.blockId === targetBlock.blockId)
-            .classed("flash", true)
-            .on("animationend.flash", function() {
-                d3.select(this).classed("flash", false).on("animationend.flash", null);
-            });
+            .classed("flash", true);
 
         // Show info panel
         showSingleBlockInfo(targetBlock);
@@ -746,7 +743,8 @@ Promise.all([
         highlightedProgram = null;
         g.selectAll(".block")
             .classed("selected", false)
-            .classed("highlighted", false);
+            .classed("highlighted", false)
+            .classed("flash", false);
         hideInfoPanel();
     }
 
@@ -937,10 +935,7 @@ Promise.all([
             // Add flash animation to selected block
             selectedBlocks
                 .filter(blockData => blockData.blockId === singleBlock.blockId)
-                .classed("flash", true)
-                .on("animationend.flash", function() {
-                    d3.select(this).classed("flash", false).on("animationend.flash", null);
-                });
+                .classed("flash", true);
 
             showSingleBlockInfo(singleBlock);
 
@@ -967,10 +962,7 @@ Promise.all([
             // Add flash animation to highlighted blocks
             highlightedBlocks
                 .filter(blockData => getBaseBlockName(blockData.program) === baseProgram)
-                .classed("flash", true)
-                .on("animationend.flash", function() {
-                    d3.select(this).classed("flash", false).on("animationend.flash", null);
-                });
+                .classed("flash", true);
 
             showProgramInfo(baseProgram);
 
@@ -1381,10 +1373,7 @@ Promise.all([
                 // Add flash animation to selected blocks
                 selectedBlocks
                     .filter(blockData => blockData.blockId === d.blockId)
-                    .classed("flash", true)
-                    .on("animationend.flash", function() {
-                        d3.select(this).classed("flash", false).on("animationend.flash", null);
-                    });
+                    .classed("flash", true);
 
                 showSingleBlockInfo(d); // Always pass the clicked data object, not original
             })
@@ -1403,10 +1392,7 @@ Promise.all([
                 // Add flash animation to highlighted blocks
                 highlightedBlocks
                     .filter(blockData => getBaseBlockName(blockData.program) === baseBlockName)
-                    .classed("flash", true)
-                    .on("animationend.flash", function() {
-                        d3.select(this).classed("flash", false).on("animationend.flash", null);
-                    });
+                    .classed("flash", true);
 
                 showProgramInfo(baseBlockName);
             })
